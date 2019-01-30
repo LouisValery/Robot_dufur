@@ -3,3 +3,5 @@ workspaceRos/build/
 workspaceRos/devel/
 __pycache__
 *.pyc
+.~lock.rapport_premiere_seance.docx#
+
