@@ -35,8 +35,8 @@ ANGLE_MIN = -0.2
 HAUTEUR = -485 # pixels
 EPSILON_HAUTEUR = 20 
 AREA_MIN = 5000
-L20_min  = -1
-L20_max = 1
+L20_min  = -0.2
+L20_max = 0.1
 # Calibration
 #d1 =   --> h1 = ?
 #d2 =   --> h2 = ?
@@ -179,48 +179,47 @@ class data_getting():
         Quand il est bien placé apelle la fonction pour peindre  
         
         """
+        #si on est à l'arret, on veut placer le bras
         if self.arreter == 1:
             print("ETAT = arret")
-
+            
+            #si on a bien une image
             if (self.img2 is not None) and (self.consigne is not None) :
-                 a,b,area = detect(self.img2)
-                 #print("image bras area  = ", area)
-    #                             while (area == False):
-    #                                 self.consigne.linear.x = 0
-    #                                 self.consigne.angular.z = 0.02
-    #                                 self.pub.publish(self.consigne)
-    #                                 a,b,area = dself.L_arm = 0etect(self.img2)
-    #                                 print("tourner g")
-     
+                 a,b,area = detect(self.img2) #centre et zone de la tache verte
+                 
+                 #si on a bien du vert dans l'image
                  if a!=False:
                      [l,L,_] = self.img2.shape
                      self.cx,self.cy = a,b
+                     
                      #initial arm position
                      x0 = np.round(l/2)
                      y0 = np.round(L/2)
                      
                      
-                     #desired position
-                     
+                     #calcule à la première iteration: desired position
                      if(self.arm_init == True):
                          xd = self.cx
                          yd = self.cy
     
                          #calculate next theta value
                          thetad = setTheta(xd,yd,x0,y0, self.C_arm)
-                         self.publisher_angle.publish(thetad)    
+                         self.publisher_angle.publish(thetad)   
+                         
                          #calculate next L value
                          L2_fin,x0_laser,y0_laser = setL(self.C_arm,thetad,x0,y0,xd,yd)
                          self.publisher_L.publish(self.C_arm + L2_fin) 
                          self.C_arm = self.C_arm + L2_fin
-                         self.arm_init = False
+                         self.arm_init = False #pour ne plus rentrer dans la boucle
                          
-                     a,b,area = detect(self.img2)
+                     a,b,area = detect(self.img2) #centre et zone du vert
+                     #si bras trop long
                      if(b > np.round(L/2) and self.C_arm > L20_min):
                          a,b,area = detect(self.img2)
                          self.C_arm = self.C_arm - 0.001
                          self.publisher_L.publish(self.C_arm)
-                             
+                    
+                    #si bras trop court
                      elif(b < np.round(L/2) and self.C_arm < L20_max):
                          a,b,area = detect(self.img2)
                          self.C_arm = self.C_arm + 0.001
@@ -281,7 +280,7 @@ class data_getting():
                         self.consigne.angular.z = 0
                         self.consigne.linear.x = 0
                         self.pub.publish(self.consigne)
-                        self.eradication()
+#                        self.eradication()
                          # quand fini peindre mettre à false
                         
                                         
