@@ -27,8 +27,6 @@ from simple_pid import PID
 import tf
 from gazebo_msgs.srv import DeleteModel, SpawnModel, GetModelState
 import time
-import tf2_ros
-import tf2_geometry_msgs
 
 
 
@@ -81,8 +79,7 @@ class data_getting():
 
         print(" Init Gazebo ")
         
-        self.buf = tf2_ros.Buffer()
-        self.listener = tf2_ros.TransformListener(self.buf)
+        self.listener = tf.TransformListener()
         print("Waiting for gazebo services...")
         rospy.wait_for_service("gazebo/delete_model")
         print("service1")
@@ -124,49 +121,28 @@ class data_getting():
     def callback_cmd(self,data):
         self.consigne = data
     
-    def laser_cone(self):
-    	# flag pour boucle -> trouver tf2
-        	transf = 0
-        		
+    def eradication(self):
+        orient = Quaternion(0,0,0,0)
         
-        	orient = Quaternion(0,0,0,1)
-        	
-        	print("While.")
-        		
-        	while transf == 0:
-        		try: #listen to tf
-        			transforme = self.buf.lookup_transform('map', 'cameraBras_link', rospy.Time(0))
-        			xc = transforme.transform.translation.x
-        			yc = transforme.transform.translation.y
-        			zc = transforme.transform.translation.z
-        			transf = 1
+        try: #listen to tf
+            (trans,rot) = self.listener.lookupTransform('cameraBras_link', '/base_link', rospy.Time(0))
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            pass
         
-        		except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-        		
-        			#print("err.")
-        			continue
-        		
-        		
-        	#getting laser position et "printing" laser on gazebo
-        	laser = "laser"
-        		
-        	print(xc, yc, zc)
-        	#laser_pose = Pose(Point(x=xc, y=yc, z=zc), orient)
-        	#self.spawn_model(laser, self.laser_sdf, "", laser_pose, "world")
+
+        chara = self.laser_sdf[6].split(' ')
+        #x = chara[10], y = chara[11], z = chara[12]
+
+        laser = "laser"
+        self.laser_sdf[6] = "         <pose> "+str(round(trans[0], 3))+" "+str(round(trans[1], 3))+" "+str(chara[12])+" 0 0 0 </pose>\n"
+
+        with open("./laser.sdf", "w") as f:
+            self.laser_sdf = f.writelines(self.laser_sdf)
+            
+        with open("./laser.sdf", "r") as f:
+            self.laser_sdf = f.read()
         
-        	#deleting plants
-        	l_dists = []
-        	for i in self.plants:
-        		plant_name="plant{}".format(i)
-        		p = self.get_model_state("floor", plant_name)
-        		x = -p.pose.position.x
-        		y =-p.pose.position.y
-        		l_dists.append(np.sqrt((x-xc)**2 + (y-yc)**2))
-        		print(i, round(x, 3), round(y, 3))
-        		
-        	print("\n")
-        	print(l_dists)
-        
+<<<<<<< HEAD
         	if len(l_dists) > 0:		
         		ind = np.argmin(l_dists)
         		ind2 = self.plants[ind]
@@ -174,11 +150,38 @@ class data_getting():
         		print(ind)
         		print(self.plants,"plant{}".format(ind2), "\n\n")
         		self.delete_model("plant{}".format(ind2))
+=======
+        laser_pose = Pose(Point(x=trans[0], y=trans[1], z=trans[2]), orient)
+        self.spawn_model(laser, self.laser_sdf, "", laser_pose, "world")
+        print("Spawn model:", laser)
+>>>>>>> 15dae32ef4b8a4491a3b482b7e26b519ace963df
         
+        # suppression plants   
+        l_dists = []
+        for i in self.plants:
+            plant_name="plant{}".format(i)
+            print(i, plant_name)
+            p = self.get_model_state("floor", plant_name)
+            x = p.pose.position.x
+            y = p.pose.position.y
+            l_dists.append(np.sqrt((x-trans[0])**2 + (y-trans[1])**2))
+           
+        print(l_dists)
+        ind = np.argmin(l_dists)
+        print(ind)
+        print(self.plants)
+        ind2 = self.plants.pop(ind)
+        print(self.plants,"plant{}".format(ind2))
         
+<<<<<<< HEAD
 #        		self.delete_model(laser)
         		
         		return ind
+=======
+        self.delete_model("plant{}".format(ind))
+        self.delete_model(laser)
+        print("Deleting model:", laser)
+>>>>>>> 15dae32ef4b8a4491a3b482b7e26b519ace963df
 
     
     # Fonction principale a appeler en boucle 
@@ -192,6 +195,7 @@ class data_getting():
         Quand il est bien placé apelle la fonction pour peindre  
         
         """
+<<<<<<< HEAD
         
         #si on est à l'arret, on veut placer le bras
         if self.arreter == 1:
@@ -200,6 +204,16 @@ class data_getting():
             if (self.img2 is not None) and (self.consigne is not None) :
                  a,b,area = detect(self.img2)
 
+=======
+        #si on est à l'arret, on veut placer le bras
+        if self.arreter == 1:
+            print("ETAT = arret")
+            
+            #si on a bien une image
+            if (self.img2 is not None) and (self.consigne is not None) :
+                 a,b,area = detect(self.img2) #centre et zone de la tache verte
+                 
+>>>>>>> 15dae32ef4b8a4491a3b482b7e26b519ace963df
                  #si on a bien du vert dans l'image
                  if a!=False:
                      [l,L,_] = self.img2.shape
@@ -210,7 +224,10 @@ class data_getting():
                      y0 = np.round(L/2)
                      
                      
+<<<<<<< HEAD
                      #desired position
+=======
+>>>>>>> 15dae32ef4b8a4491a3b482b7e26b519ace963df
                      #calcule à la première iteration: desired position
                      if(self.arm_init == True):
                          xd = self.cx
@@ -218,23 +235,36 @@ class data_getting():
     
                          #calculate next theta value
                          thetad = setTheta(xd,yd,x0,y0, self.C_arm)
+<<<<<<< HEAD
                          self.publisher_angle.publish(thetad)
+=======
+                         self.publisher_angle.publish(thetad)   
+>>>>>>> 15dae32ef4b8a4491a3b482b7e26b519ace963df
                          
                          #calculate next L value
                          L2_fin,x0_laser,y0_laser = setL(self.C_arm,thetad,x0,y0,xd,yd)
                          self.publisher_L.publish(self.C_arm + L2_fin) 
                          self.C_arm = self.C_arm + L2_fin
-                         self.arm_init = False
+                         self.arm_init = False #pour ne plus rentrer dans la boucle
                          
+<<<<<<< HEAD
                      a,b,area = detect(self.img2)
                      
+=======
+                     a,b,area = detect(self.img2) #centre et zone du vert
+>>>>>>> 15dae32ef4b8a4491a3b482b7e26b519ace963df
                      #si bras trop long
                      if(b > np.round(L/2) and self.C_arm > L20_min):
                          a,b,area = detect(self.img2)
                          self.C_arm = self.C_arm - 0.001
                          self.publisher_L.publish(self.C_arm)
+<<<<<<< HEAD
                          
                      #si bras trop court        
+=======
+                    
+                    #si bras trop court
+>>>>>>> 15dae32ef4b8a4491a3b482b7e26b519ace963df
                      elif(b < np.round(L/2) and self.C_arm < L20_max):
                          a,b,area = detect(self.img2)
                          self.C_arm = self.C_arm + 0.001
@@ -243,15 +273,22 @@ class data_getting():
                      #si on est bien place
                      if(abs(x0 - b) <= 10  and  abs(y0 - b) <= 10 ):                                        
                          self.arreter = 0
+<<<<<<< HEAD
                          print("valide position. attends 10s")
                          
                      #self.eradication()
                          ind = self.laser_cone()
                          
                          time.sleep(10)
+=======
+                         print("valide. attends 20s")
+                         time.sleep(20)
+                     #self.eradication()
+
+>>>>>>> 15dae32ef4b8a4491a3b482b7e26b519ace963df
 
         elif (self.img1 is not None) and (self.consigne is not None) and self.arreter == 0 :
-            print("ETAT = deplacement vers plante")
+            print("ETAT = avancer")
             self.publisher_angle.publish(0)
             self.publisher_L.publish(0)
             a,b,_ = detect(self.img1)
@@ -262,6 +299,7 @@ class data_getting():
                 self.angle, self.hauteur = getAngle(self.img1,self.cx,self.cy)
                 # Regler angle
                 
+<<<<<<< HEAD
 #                if self.angle >= ANGLE_MAX or self.angle <= ANGLE_MIN :                  
 #                    while self.angle >= ANGLE_MAX or self.angle <= ANGLE_MIN :
 #                        print("je suis dans le while je regle l'angle")
@@ -283,8 +321,22 @@ class data_getting():
                     self.consigne.angular.z = -0.01
                     self.pub.publish(self.consigne)
                     print("tourner d")  
+=======
+                if self.angle >= ANGLE_MAX or self.angle <= ANGLE_MIN :                  
+                    while self.angle >= ANGLE_MAX or self.angle <= ANGLE_MIN :
+#                        print("je suis dans le while je regle l'angle")
+                        self.consigne.linear.x = 0
+                        a,b,_ = detect(self.img1)
+                        self.cx,self.cy = a,b
+                        self.angle, self.hauteur = getAngle(self.img1,self.cx,self.cy)
+#                        print("La consigne est de ",-self.consigne.angular.z)
+#                        print("erreur", self.angle)
+                        self.consigne.angular.z = -self.pidangle(self.angle)
+                        self.pub.publish(self.consigne)
+                        
+>>>>>>> 15dae32ef4b8a4491a3b482b7e26b519ace963df
                 else :
-                    print("HAUTEUR =" , self.hauteur)
+#                    print("HAUTEUR =" , self.hauteur)
                     self.consigne.angular.z = 0
                     # regle distance
                     if self.hauteur >= HAUTEUR + EPSILON_HAUTEUR:
@@ -292,9 +344,9 @@ class data_getting():
                         #avance
                         self.consigne.linear.x = -0.1
                         self.pub.publish(self.consigne)
-                        print("recule")
+#                        print("recule")
                     elif self.hauteur <= HAUTEUR - EPSILON_HAUTEUR:
-                        print("avance")
+#                        print("avance")
                         self.consigne.linear.x = 0.1
                         self.pub.publish(self.consigne)
                     else:
@@ -307,7 +359,7 @@ class data_getting():
                         self.consigne.angular.z = 0
                         self.consigne.linear.x = 0
                         self.pub.publish(self.consigne)
-                        
+#                        self.eradication()
                          # quand fini peindre mettre à false
                         
                                         
